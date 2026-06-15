@@ -6,6 +6,26 @@ This project implements a robust agentic loop for tracking order status, evolvin
 
 The system is decoupled into specific components to ensure reliability, testability, and scalability.
 
+### Logic Flow
+```mermaid
+graph TD
+    User((User Query)) --> Orch[Orchestrator]
+    Orch -->|1. Inject State| State[StateManager]
+    State -->|Goal + Facts| Orch
+    Orch -->|2. Request| LLM[LLM Driver]
+    LLM -->|Tool Call| Orch
+    Orch -->|3. Validate Name| Reg[Tool Registry]
+    Reg -->|OK| Orch
+    Orch -->|4. Validate Args| Sch[Pydantic Schemas]
+    Sch -->|OK| Orch
+    Orch -->|5. Execute| Tool[Concrete Tool]
+    Tool -->|Result| Orch
+    Orch -->|6. Update Facts| State
+    Orch -->|Loop back| LLM
+    Orch -->|7. Final Verify| State
+    State -->|Verified| User
+```
+
 ```text
 order-status-agent/
 ├── main.py                 # Application entry point
