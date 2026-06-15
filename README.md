@@ -1,42 +1,48 @@
-# Order Status Agent
+# Order Status Agent (Production Architecture)
 
-This project implements an agentic loop for tracking order status, specifically designed to demonstrate the "Five Guards" of agentic backend design to prevent common failure modes like loops, fabrications, and invalid tool calls.
+This project implements a robust agentic loop for tracking order status, evolving a demo script into a modular, production-ready architecture.
 
-## 🛡️ The Five Guards
-The implementation in `main.py` features:
-1. **Tool Registry**: Rejects unknown tool names.
-2. **Schema Validation**: Uses Pydantic to reject bad/missing arguments before execution.
-3. **Circuit Breaker**: Caps total iterations and detects repeated identical calls.
-4. **State Re-injection**: Pins the goal and verified facts at the end of the context every turn.
-5. **Untrusted Output Check**: Verifies the final answer against verified facts (e.g., checking if the ETA matches the real tool result).
+## 🏗️ Production Architecture
+
+The system is decoupled into specific components to ensure reliability, testability, and scalability.
+
+```text
+order-status-agent/
+├── main.py                 # Application entry point
+├── app/
+│   ├── orchestrator.py     # Core loop (implements the 5 Guards)
+│   ├── registry.py         # Guard 1: Centralized tool management
+│   ├── state_manager.py    # Guard 4: Verified fact tracking
+│   ├── tools/              # Decoupled tool implementations
+│   │   ├── base.py         # Tool definitions
+│   │   └── order_tools.py  # Concrete business tools
+│   └── schemas/            # Argument validation
+│       └── tool_args.py     # Pydantic models
+```
+
+## 🛡️ The Five Guards Implementation
+
+The `Orchestrator` manages the following guards in a precise sequence:
+
+1. **Tool Registry (Guard 1)**: Uses `ToolRegistry` to verify tool existence before execution.
+2. **Schema Validation (Guard 2)**: Uses Pydantic models in `tool_args.py` to validate arguments.
+3. **Circuit Breaker (Guard 3)**: Caps iterations and detects repeated identical calls using a call-signature set.
+4. **State Re-injection (Guard 4)**: Uses `StateManager` to append `GOAL` and `KNOWN FACTS` to the prompt at every turn.
+5. **Untrusted Output Check (Guard 5)**: Cross-references the final LLM response against verified facts in the `StateManager`.
 
 ## 🚀 Running the Agent
 
-### Prerequisites
-- Python 3.10+
-- `pydantic`
-- (Optional) [Ollama](https://ollama.com/) for real local model execution.
-
 ### Installation
 ```bash
-pip install pydantic
-# If using Ollama
-pip install ollama
+pip install pydantic ollama
 ```
 
 ### Execution Modes
-The agent can be run in two modes:
-
-1. **Mock Mode (Demo)**: Replays a scripted "buggy model" to show how the guards fire.
-   ```bash
-   python main.py --mock
-   ```
-
-2. **Ollama Mode (Real)**: Runs against a local model via Ollama.
-   ```bash
-   python main.py --ollama --model qwen3:7b
-   ```
-
-## ⚙️ Architecture
-- **Naive Loop**: Demonstrates how an unguarded agent can fail (e.g., looping on a wrong ID).
-- **Guarded Loop**: Implements the full safety stack to ensure correctness and reliability.
+- **Mock Mode**: Replays a scripted buggy model to demonstrate the guards firing.
+  ```bash
+  python main.py --mock
+  ```
+- **Ollama Mode**: Connects to a local LLM via Ollama.
+  ```bash
+  python main.py --ollama --model qwen3:7b
+  ```
